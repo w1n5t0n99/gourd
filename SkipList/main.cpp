@@ -35,6 +35,11 @@ int main()
 	skip_list.Insert(5466);
 
 	Test(skip_list);
+	
+	if (skip_list.Find(1))
+		printf("Found!\n");
+	else
+		printf("Not found!\n");
 
 	std::cin.get();
 	return 0;

@@ -4,30 +4,55 @@
 #include <random>
 #include <assert.h>
 
-inline int CoinToss()
-{
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dis(0, 1);
-
-	return dis(gen);
-}
 
 class TestSkipList
 {
 public:
 	TestSkipList() : size_(0), nodes_{}, prev_nodes_{}, values_{}
 	{
-
+		nodes_[KRoot_Index].height = KMax_Height;
+		for (int i = 0; i < KMax_Height; ++i)
+			nodes_[KRoot_Index].next[i] = KTombstone;
 	}
 
 	void Insert(int data)
 	{
-		assert(size_ < KMax_Size - 1);
+		// 0 reserved for sentinel value
+		// and 0xffff reserved for tombstone
+		assert(size_ < KMax_Size - 2);
+
 		auto node_index = CreateNode();
 		values_[node_index] = data;
+		InsertNode(node_index, KRoot_Index, 0);
+	}
 
-		InsertNode(node_index, 0, 0);
+	bool Find(int value)
+	{
+		if (FindNode(value) == KTombstone)
+			return false;
+		else
+			true;
+	}
+
+	bool Remove(int value)
+	{
+		auto found_index = FindNode(value);
+		if (found_index == KTombstone)
+			return false;
+
+		auto found_node = nodes_[found_index];
+		auto prev_nodes = prev_nodes_[found_index];
+
+		for (int i = 0; i < KMax_Height; ++i)
+		{
+
+		}
+
+	}
+
+	size_t Size()
+	{
+		return size_;
 	}
 
 private:
@@ -36,28 +61,23 @@ private:
 	{
 		int i = 1;
 		int toss = 1;
-		if (size_ == 0)
-		{
-			nodes_[size_].height = KMax_Height;
-		}
-		else
-		{
-			while (i < KMax_Height && toss > 0)
-			{
-				++i;
-				toss = CoinToss();
-			}
 
-			nodes_[size_].height = i;
+		while (i < KMax_Height && toss > 0)
+		{
+			++i;
+			toss = CoinToss();
 		}
+
+		size_t last_index = size_ + 1;
+		nodes_[last_index].height = i;
 
 		for (int i = 0; i < KMax_Height; ++i)
 		{
-			nodes_[size_].next[i] = KTombstone;
-			prev_nodes_[size_][i] = KTombstone;
+			nodes_[last_index].next[i] = KTombstone;
+			prev_nodes_[last_index][i] = KTombstone;
 		}
 
-		return size_++;
+		return ++size_;
 	}
 
 	void InsertNode(uint16_t node_index, uint16_t cur_node_index, uint8_t level)
@@ -85,11 +105,43 @@ private:
 		}
 	}
 
+	uint16_t FindNode(int value)
+	{
+		auto level = KMax_Height - 1;
+		auto cur_index = KRoot_Index;
+		auto right_of_index = KTombstone;
+		while (level > 0)
+		{
+			right_of_index = nodes_[cur_index].next[level];
+			if (right_of_index == KTombstone)
+				--level;
+			else if (value == values_[right_of_index])
+				return right_of_index;
+			else if (value < values_[right_of_index])
+				--level;
+			else
+				cur_index = right_of_index;
+		}
+
+		return KTombstone;
+	}
+
+	int CoinToss()
+	{
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dis(0, 1);
+
+		return dis(gen);
+	}
+
 	static const size_t KMax_Size = 64;
 	// height = log2(max size)
 	static const size_t KMax_Height = 6;
 	// null value
 	static const uint16_t KTombstone = 0xffff;
+	// root node index
+	static const uint16_t KRoot_Index = 0;
 
 	struct Node
 	{
@@ -99,7 +151,7 @@ private:
 
 	std::array<Node, KMax_Size> nodes_;
 	std::array<int, KMax_Size> values_;
-	std::array<uint8_t[KMax_Height], KMax_Size> prev_nodes_;
+	std::array<uint16_t[KMax_Height], KMax_Size> prev_nodes_;
 
 	size_t size_;
 
