@@ -36,10 +36,21 @@ int main()
 
 	Test(skip_list);
 	
-	if (skip_list.Find(1))
+	if (skip_list.Find(887))
 		printf("Found!\n");
 	else
 		printf("Not found!\n");
+
+	skip_list.Remove(887);
+	skip_list.Insert(888);
+
+	Test(skip_list);
+
+	if (skip_list.Find(887))
+		printf("Found!\n");
+	else
+		printf("Not found!\n");
+
 
 	std::cin.get();
 	return 0;

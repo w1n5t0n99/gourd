@@ -12,7 +12,10 @@ public:
 	{
 		nodes_[KRoot_Index].height = KMax_Height;
 		for (int i = 0; i < KMax_Height; ++i)
+		{
 			nodes_[KRoot_Index].next[i] = KTombstone;
+			prev_nodes_[0][i] = KTombstone;
+		}
 	}
 
 	void Insert(int data)
@@ -40,12 +43,42 @@ public:
 		if (found_index == KTombstone)
 			return false;
 
-		auto found_node = nodes_[found_index];
-		auto prev_nodes = prev_nodes_[found_index];
-
+		auto last_node = size_;
+		auto& found_node = nodes_[found_index];
+		auto& prev_nodes = prev_nodes_[found_index];
+		// prepare for removal
 		for (int i = 0; i < KMax_Height; ++i)
 		{
+			if (found_node.next[i] != KTombstone)
+			{
+				auto& next_prev_nodes = prev_nodes_[found_node.next[i]];
+				next_prev_nodes[i] = prev_nodes[i];
+			}
+		}
 
+		if (found_index != last_node)
+		{
+			
+			found_node = nodes_[last_node];
+			values_[found_index] = std::move(values_[last_node]);
+			for (int i = 0; i < KMax_Height; ++i)
+			{
+				prev_nodes[i] = prev_nodes_[last_node][i];
+			}
+		}
+
+		//values_[size_].~T();
+		values_[last_node] = 0;
+		--size_;
+		for (int i = 0; i < KMax_Height; ++i)
+		{ 
+			if (prev_nodes[i] != KTombstone)
+			{
+				if (nodes_[prev_nodes[i]].next[i] != KTombstone)
+				{
+					nodes_[prev_nodes[i]].next[i] = found_index;
+				}
+			}
 		}
 
 	}
