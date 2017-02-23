@@ -5,17 +5,17 @@
 #include "skip_list.h"
 
 
-void Test(const TestSkipList& sl)
+void Test(const SkipList<int, 16>& sl)
 {
 	int level = 0;
-	while (level < TestSkipList::KMax_Height)
+	while (level < SkipList<int, 16>::KMax_Height)
 	{
 		printf("level %d - ", level);
 		auto right_of = sl.nodes_[0].next[level];
 
-		while (right_of != TestSkipList::KTombstone)
+		while (right_of != SkipList<int, 16>::KTombstone)
 		{
-			printf(" %d ", sl.values_[right_of]);
+			printf(" %d ", sl.nodes_[right_of].data);
 			right_of = sl.nodes_[right_of].next[level];
 		}
 		printf("\n");
@@ -26,7 +26,7 @@ void Test(const TestSkipList& sl)
 
 int main()
 {
-	TestSkipList skip_list;
+	SkipList<int, 16> skip_list;
 	skip_list.Insert(55);
 	skip_list.Insert(33);
 	skip_list.Insert(4565);
@@ -41,15 +41,6 @@ int main()
 	else
 		printf("Not found!\n");
 
-	skip_list.Remove(887);
-	skip_list.Insert(888);
-
-	Test(skip_list);
-
-	if (skip_list.Find(887))
-		printf("Found!\n");
-	else
-		printf("Not found!\n");
 
 
 	std::cin.get();

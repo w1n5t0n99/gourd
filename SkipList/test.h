@@ -142,6 +142,8 @@ private:
 	{
 		auto level = KMax_Height - 1;
 		auto cur_index = KRoot_Index;
+		auto* root_node = &nodes_[KRoot_Index];
+
 		auto right_of_index = KTombstone;
 		while (level > 0)
 		{
@@ -190,3 +192,5 @@ private:
 
 	friend void Test(const TestSkipList& sl);
 };
+
+
