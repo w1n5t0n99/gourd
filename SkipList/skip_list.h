@@ -8,18 +8,23 @@ class SkipList
 public:
 	SkipList() : size_(0), cap_(0)
 	{
-
+		// add root node
+		CreateNode();
 	}
 
 	void Insert(const T& data)
 	{
+		//make sure node doesnt exist before adding 
+		if (Contains(data))
+			return;
+
 		Node<>* node = CreateNode();
 		node->data = data;
 
 		InsertNode(std::make_pair(node, cap_ - 1), std::make_pair(&nodes_[KRoot_Index], KRoot_Index), 0);
 	}
 
-	bool Find(int value)
+	bool Contains(int value)
 	{
 		if (FindNode(value) == nullptr)
 			return false;
@@ -115,12 +120,16 @@ private:
 	//====================================================
 	void InsertNode(NodePair insert_node, NodePair cur_node, int level)
 	{
+		printf("insert_node %d\n", insert_node.first->data);
 		NodePair right_of_node;
-		// nodes cannot be create above the max height
-		if (level < insert_node.first->height)
+		// reached nodes height so finished inserting
+		if (level > insert_node.first->height)
+			return;
+
+		if(level < cur_node.first->height)
 			right_of_node = NextNode(cur_node.first, level);
 		else
-			return;
+			right_of_node = std::make_pair(nullptr, KTombstone);
 		
 		if (right_of_node.first && right_of_node.first->data < insert_node.first->data)
 		{
@@ -164,4 +173,93 @@ private:
 	size_t cap_;
 
 	friend void Test(const SkipList<T, size>& sl);
+};
+
+
+
+
+
+
+
+
+
+
+
+template <typename T, size_t Chunk_Size, size_t Max_Level = 16>
+class ChunkSkipList
+{
+public:
+
+private:
+
+	//==============================
+	// node object 
+	//===============================
+	template <typename S = T, size_t Chunks = Chunk_Size>
+	struct Node
+	{
+		virtual  Node<> const * const Next(size_t level) = 0;
+		virtual bool SetNext(Node<>* next_node, size_t level) = 0;
+		size_t size = 0;
+		S values[Chunks];
+	};
+
+	template <size_t shortcuts>
+	struct LevelNode : Node<>
+	{
+		virtual Node<> const * const Next(size_t level) override
+		{
+			if (level < shortcuts)
+				return next[level];
+			else
+				return nullptr;
+		}
+
+		virtual bool SetNext(Node<>* next_node, size_t level) override
+		{
+			bool success = true;
+			if (level < shortcuts)
+				next[level] = next_node;
+			else
+				success = false;
+
+			return success;
+		}
+	
+		Node<>* next[shortcuts];
+	};
+
+	//====================================
+	// used to generate randomized level
+	//=====================================
+	int CoinToss()
+	{
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dis(0, 1);
+
+		return dis(gen);
+	}
+
+	//=================================
+	// create a node in array
+	//==================================
+	Node<>* CreateNode()
+	{
+		int i = 1;
+		int toss = 1;
+
+		while (i++ < KMax_Height && toss > 0)
+			toss = CoinToss();
+
+
+		LevelNode<i> node = new LevelNode<i>;
+		std::fill(std::begin(node->nextext), std::end(node->next), nullptr);
+		return node;
+	}
+
+	static const size_t KMax_Chunk = Chunk_Size;
+	// height = log2(max size)
+	static const size_t KMax_Height = Max_Level;
+
 };

@@ -36,7 +36,7 @@ int main()
 
 	Test(skip_list);
 	
-	if (skip_list.Find(887))
+	if (skip_list.Contains(887))
 		printf("Found!\n");
 	else
 		printf("Not found!\n");
