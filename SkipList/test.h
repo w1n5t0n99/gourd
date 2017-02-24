@@ -3,164 +3,22 @@
 #include <array>
 #include <random>
 #include <assert.h>
+#include <vector>
 
-
-class TestSkipList
+template <typename T>
+class SSkipList
 {
 public:
-	TestSkipList() : size_(0), nodes_{}, prev_nodes_{}, values_{}
+	SSkipList()
 	{
-		nodes_[KRoot_Index].height = KMax_Height;
 		for (int i = 0; i < KMax_Height; ++i)
-		{
-			nodes_[KRoot_Index].next[i] = KTombstone;
-			prev_nodes_[0][i] = KTombstone;
-		}
-	}
-
-	void Insert(int data)
-	{
-		// 0 reserved for sentinel value
-		// and 0xffff reserved for tombstone
-		assert(size_ < KMax_Size - 2);
-
-		auto node_index = CreateNode();
-		values_[node_index] = data;
-		InsertNode(node_index, KRoot_Index, 0);
-	}
-
-	bool Find(int value)
-	{
-		if (FindNode(value) == KTombstone)
-			return false;
-		else
-			true;
-	}
-
-	bool Remove(int value)
-	{
-		auto found_index = FindNode(value);
-		if (found_index == KTombstone)
-			return false;
-
-		auto last_node = size_;
-		auto& found_node = nodes_[found_index];
-		auto& prev_nodes = prev_nodes_[found_index];
-		// prepare for removal
-		for (int i = 0; i < KMax_Height; ++i)
-		{
-			if (found_node.next[i] != KTombstone)
-			{
-				auto& next_prev_nodes = prev_nodes_[found_node.next[i]];
-				next_prev_nodes[i] = prev_nodes[i];
-			}
-		}
-
-		if (found_index != last_node)
-		{
-			
-			found_node = nodes_[last_node];
-			values_[found_index] = std::move(values_[last_node]);
-			for (int i = 0; i < KMax_Height; ++i)
-			{
-				prev_nodes[i] = prev_nodes_[last_node][i];
-			}
-		}
-
-		//values_[size_].~T();
-		values_[last_node] = 0;
-		--size_;
-		for (int i = 0; i < KMax_Height; ++i)
-		{ 
-			if (prev_nodes[i] != KTombstone)
-			{
-				if (nodes_[prev_nodes[i]].next[i] != KTombstone)
-				{
-					nodes_[prev_nodes[i]].next[i] = found_index;
-				}
-			}
-		}
+			root[i] = nullptr;
 
 	}
 
-	size_t Size()
-	{
-		return size_;
-	}
-
-private:
-
-	uint16_t CreateNode()
-	{
-		int i = 1;
-		int toss = 1;
-
-		while (i < KMax_Height && toss > 0)
-		{
-			++i;
-			toss = CoinToss();
-		}
-
-		size_t last_index = size_ + 1;
-		nodes_[last_index].height = i;
-
-		for (int i = 0; i < KMax_Height; ++i)
-		{
-			nodes_[last_index].next[i] = KTombstone;
-			prev_nodes_[last_index][i] = KTombstone;
-		}
-
-		return ++size_;
-	}
-
-	void InsertNode(uint16_t node_index, uint16_t cur_node_index, uint8_t level)
-	{
-		uint16_t right_of_index = KTombstone;
-		// nodes cannot be create above the max height
-		if (level < nodes_[node_index].height)
-			right_of_index = nodes_[cur_node_index].next[level];
-		else
-			return;
-
-		if (right_of_index != KTombstone && values_[right_of_index] < values_[node_index])
-		{
-			// we overshot keep moving right
-			InsertNode(node_index, right_of_index, level);
-		}
-		else
-		{
-			nodes_[cur_node_index].next[level] = node_index;
-			nodes_[node_index].next[level] = right_of_index;
-			prev_nodes_[node_index][level] = cur_node_index;
-			// we have reached not the inserted nodes height yet,
-			// check next level
-			InsertNode(node_index, 0, ++level);
-		}
-	}
-
-	uint16_t FindNode(int value)
-	{
-		auto level = KMax_Height - 1;
-		auto cur_index = KRoot_Index;
-		auto* root_node = &nodes_[KRoot_Index];
-
-		auto right_of_index = KTombstone;
-		while (level > 0)
-		{
-			right_of_index = nodes_[cur_index].next[level];
-			if (right_of_index == KTombstone)
-				--level;
-			else if (value == values_[right_of_index])
-				return right_of_index;
-			else if (value < values_[right_of_index])
-				--level;
-			else
-				cur_index = right_of_index;
-		}
-
-		return KTombstone;
-	}
-
+	//====================================
+	// used to generate randomized level
+	//=====================================
 	int CoinToss()
 	{
 		std::random_device rd;
@@ -170,27 +28,163 @@ private:
 		return dis(gen);
 	}
 
-	static const size_t KMax_Size = 64;
-	// height = log2(max size)
-	static const size_t KMax_Height = 6;
-	// null value
-	static const uint16_t KTombstone = 0xffff;
-	// root node index
-	static const uint16_t KRoot_Index = 0;
-
-	struct Node
+	//==============================
+	// node object 
+	//===============================
+	template <typename S>
+	class Node
 	{
-		uint8_t height;
-		uint16_t next[KMax_Height];
+	public:
+		Node(const S& value, size_t size) : value_(value), size_(size) {};
+		Node(S&& value, size_t size) : value_(std::move(value)), size_(size) {};
+		virtual ~Node() {};
+
+		S& Value() { return value_; }
+		size_t Size() { return size_; }
+
+		virtual  Node<S> const * const Next(size_t level) = 0;
+		virtual bool BindNext(Node<S>* next_node, size_t level) = 0;
+
+	private:
+		size_t size_ = 0;
+		S value_;
 	};
 
-	std::array<Node, KMax_Size> nodes_;
-	std::array<int, KMax_Size> values_;
-	std::array<uint16_t[KMax_Height], KMax_Size> prev_nodes_;
+	template <size_t shortcuts>
+	class LevelNode : public Node<T>
+	{
+	public:
+		LevelNode(const T& t) : Node<T>(t, shortcuts) {};
+		LevelNode(T&& t) : Node<T>(std::move(t), shortcuts) {};
 
-	size_t size_;
+		virtual ~LevelNode() {};
+		virtual Node<T> const * const Next(size_t level) override
+		{
+			if (level < shortcuts)
+				return next[level];
+			else
+				return nullptr;
+		}
 
-	friend void Test(const TestSkipList& sl);
+		virtual bool BindNext(Node<T>* next_node, size_t level) override
+		{
+			bool success = true;
+			if (level < shortcuts)
+				next[level] = next_node;
+			else
+				success = false;
+
+			return success;
+		}
+
+	private:
+		Node<T>* next[shortcuts];
+	};
+
+	using Level_1_Node = LevelNode<1>;
+	using Level_2_Node = LevelNode<2>;
+	using Level_3_Node = LevelNode<3>;
+	using Level_4_Node = LevelNode<4>;
+	using Level_5_Node = LevelNode<5>;
+	using Level_6_Node = LevelNode<6>;
+	using Level_7_Node = LevelNode<7>;
+	using Level_8_Node = LevelNode<8>;
+	using Level_9_Node = LevelNode<9>;
+	using Level_10_Node = LevelNode<10>;
+	using Level_11_Node = LevelNode<11>;
+	using Level_12_Node = LevelNode<12>;
+	using Level_13_Node = LevelNode<13>;
+	using Level_14_Node = LevelNode<14>;
+	using Level_15_Node = LevelNode<15>;
+	using Level_16_Node = LevelNode<16>;
+
+	//============================================
+	// Create node with randomized height
+	//============================================
+	Node<T>* CreateNode(const T& t)
+	{
+		int i = 1;
+		int toss = 1;
+
+		while (i++ < KMax_Height && toss > 0)
+			toss = CoinToss();
+
+		Node<T>* node = nullptr;
+
+		switch (i)
+		{
+		case 1:
+			node = new Level_1_Node(t);
+			break;
+		case 2:
+			node = new Level_2_Node(t);
+			break;
+		case 3:
+			node = new Level_3_Node(t);
+			break;
+		case 4:
+			node = new Level_4_Node(t);
+			break;
+		case 5:
+			node = new Level_5_Node(t);
+			break;
+		case 6:
+			node = new Level_6_Node(t);
+			break;
+		case 7:
+			node = new Level_7_Node(t);
+			break;
+		case 8:
+			node = new Level_8_Node(t);
+			break;
+		case 9:
+			node = new Level_9_Node(t);
+			break;
+		case 10:
+			node = new Level_10_Node(t);
+			break;
+		case 11:
+			node = new Level_11_Node(t);
+			break;
+		case 12:
+			node = new Level_12_Node(t);
+			break;
+		case 13:
+			node = new Level_13_Node(t);
+			break;
+		case 14:
+			node = new Level_14_Node(t);
+			break;
+		case 15:
+			node = new Level_15_Node(t);
+			break;
+		case 16:
+			node = new Level_16_Node(t);
+			break;
+		}
+
+		for (int i = 0; i < KMax_Height; ++i)
+			node->BindNext(nullptr, i);
+
+		return node;
+	}
+
+	void Insert(Node<T>* insert_node, Node<T>* cur_node)
+	{
+		std::vector<Node<T>*> update_nodes;
+		//start at insert nodes highest level
+		size_t level = insert_node->Size() - 1;
+		Node<T>* right_of_node = nullptr;
+		while (level > 0)
+		{
+			right_of_node = root[level];
+			if (right_of_node == nullptr)
+			{
+				update_nodes.push_back(right_of_node);
+			}
+		}
+	}
+
+	static const size_t KMax_Height = 16;
+	Node<T>* root[KMax_Height];
 };
-
-
