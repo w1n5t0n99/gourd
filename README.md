@@ -1,2 +1,2 @@
-# gourd
-openGL 4.5 renderer
+# nesulator
+simple OpenGL 4.5 render / game engine
